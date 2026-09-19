@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Society Food QR Scanner</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f7fa;margin:0;color:#222}
+.wrap{max-width:520px;margin:auto;padding:16px}
+.card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 2px 12px #0002}
+h2{text-align:center}
+#reader{width:100%;margin-top:15px}
+button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:9px;background:#1f4e78;color:#fff;font-size:17px}
+#status{text-align:center;margin-top:14px;padding:12px;border-radius:9px}
+.small{text-align:center;color:#666;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<h2>📷 Society Food Scanner</h2>
+<p class="small">Tap Start Camera, allow camera access, and point at the QR. Redemption happens automatically.</p>
+<div id="reader"></div>
+<button id="start" onclick="startScanner()">START CAMERA & SCAN</button>
+<div id="status">Ready to scan.</div>
+</div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyq20BLoamiSv38Lt91wizGbEq27COCnJfpx_dYcTt70Ny6CDFwaiCX7W3tqRwZV_JrMw/exec';
+let scanner = null;
+let started = false;
+let handled = false;
+
+function status(msg){
+  document.getElementById('status').innerText = msg;
+}
+
+function startScanner(){
+  if(started || handled) return;
+
+  if(typeof Html5Qrcode === 'undefined'){
+    status('Scanner library could not load. Check internet connection.');
+    return;
+  }
+
+  scanner = new Html5Qrcode('reader');
+  started = true;
+  document.getElementById('start').style.display='none';
+  status('Starting camera...');
+
+  scanner.start(
+    {facingMode:'environment'},
+    {fps:10, qrbox:{width:250,height:250}},
+    function(decodedText){
+      if(handled) return;
+      handled = true;
+      status('QR detected. Redeeming...');
+
+      scanner.stop().catch(function(){});
+
+      const url =
+        BACKEND_URL +
+        (BACKEND_URL.indexOf('?') >= 0 ? '&' : '?') +
+        'mode=redeem&passId=' +
+        encodeURIComponent(decodedText.trim());
+
+      // Top-level navigation avoids CORS and sends the result through Apps Script.
+      window.location.href = url;
+    },
+    function(){}
+  ).catch(function(err){
+    started=false;
+    document.getElementById('start').style.display='block';
+    status('Camera could not start: ' + err);
+  });
+}
+</script>
+</body>
+</html>
